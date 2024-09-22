@@ -5,6 +5,7 @@ Objects are loaded by reading the json and spawning cubes based on the character
 
 ## Controls
 Movement and Rotation
+
 Arrow Keys:
 Right Arrow: Rotate the object 5 degrees to the right.
 Left Arrow: Rotate the object 5 degrees to the left.
