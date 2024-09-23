@@ -247,35 +247,34 @@ void normalKeys(unsigned char key, int x, int y) {
             }
             objectToMove = cubes[currObject];
             break;
-        
+
+        case ';':
+        {
+            std::string cubeName = "Cube" + std::to_string(cubes.size());
+            cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName));
+            break;
+        }
+
         case '.':
-            for (Cube* cube : cubes) 
-            {
+            for (Cube* cube : cubes) {
                 jsonData[cube->getName()]["Type"] = "Cube";
                 jsonData[cube->getName()]["Position"] = cube->getPosition();
-
                 jsonData[cube->getName()]["Rotation"] = cube->getRotation();
-
                 jsonData[cube->getName()]["Dimensions"] = cube->getDimmensions();
             }
-
-            // Dump the JSON to a string (with pretty printing)
             std::string jsonString = jsonData.dump(4);  // 4 spaces for indentation
             std::cout << "JSON Output:\n" << jsonString << std::endl;
 
             std::ofstream file("sceneObjects.json");
-            if (file.is_open())
-            {
+            if (file.is_open()) {
                 file << jsonString;
                 file.close();
                 std::cout << "JSON file saved successfully." << std::endl;
-            }
-            else
-            {
+            } 
+            else {
                 std::cerr << "Failed to open JSON file for writing." << std::endl;
             }
-
-            break;
+            break;  // Ensure break here
     }
     glutPostRedisplay();
 }
