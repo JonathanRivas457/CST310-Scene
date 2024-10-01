@@ -14,23 +14,25 @@ private:
     float rotX, rotY, rotZ; // Rotation angles of the cube
     float size;             // Size of the cube
     float width, height, length; // Dimensions of the cube
+    float redVal, greenVal, blueVal; // Color of the cube
     std::string name; // Name of the cube
 
 
 public:
     // constructor for the cube
     Cube(float x = 0.0f, float y = 0.0f, float z = -5.0f, 
-         float w = 1.0f, float h = 1.0f, float l = 1.0f)
+         float w = 1.0f, float h = 1.0f, float l = 1.0f, float red = 1.0f, float green = 1.0f, float blue = 1.0f)
         : posX(x), posY(y), posZ(z), rotX(0.0f), rotY(0.0f), rotZ(0.0f), 
-          width(w), height(h), length(l) {}
+          width(w), height(h), length(l), redVal(red), greenVal(green), blueVal(blue) {}
     
     // Parameterized constructor (takes position, rotation, and dimensions)
     Cube(float x, float y, float z, 
          float rx, float ry, float rz, 
-         float w, float h, float l, const std::string& cubeName) 
+         float w, float h, float l, const std::string& cubeName, float red, float green, float blue) 
         : posX(x), posY(y), posZ(z), // Set position
           rotX(rx), rotY(ry), rotZ(rz), // Set rotation
           width(w), height(h), length(l), // Set dimensions
+          redVal(red/255), greenVal(green/255), blueVal(blue/255), // Set color
           name(cubeName) // set name
     {}
 
@@ -62,6 +64,10 @@ public:
         return {width, height, length};
     }
 
+    std::array<float, 3> getColor() {
+        return {redVal, greenVal, blueVal};
+    }
+
     std::string getName(){
         return name;
     }
@@ -86,71 +92,99 @@ public:
 
     // Method to draw the cube
     void draw() {
-        glPushMatrix(); // Save current transformation state
-        glTranslatef(posX, posY, posZ);  // Move cube to its position
-        glRotatef(rotX, 1.0f, 0.0f, 0.0f); // Rotate cube around X axis
-        glRotatef(rotY, 0.0f, 1.0f, 0.0f); // Rotate cube around Y axis
-        glRotatef(rotZ, 0.0f, 0.0f, 1.0f); // Rotate cube around Z axis
-        glScalef(width, height, length);      // Scale the cube
-        
-        // Draw a simple cube using quads
-        glBegin(GL_QUADS);
+    // Set material properties for shading
+    GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
+
+    GLfloat material_specular[] = {1.0, 1.0, 1.0, 1.0}; // Specular color
+    glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
+
+    GLfloat shininess[] = {50.0}; // Shininess coefficient
+    glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+
+    glPushMatrix(); // Save current transformation state
+    glTranslatef(posX, posY, posZ);  // Move cube to its position
+    glRotatef(rotX, 1.0f, 0.0f, 0.0f); // Rotate cube around X axis
+    glRotatef(rotY, 0.0f, 1.0f, 0.0f); // Rotate cube around Y axis
+    glRotatef(rotZ, 0.0f, 0.0f, 1.0f); // Rotate cube around Z axis
+    glScalef(width, height, length); // Scale the cube
+
+    glBegin(GL_QUADS);
     
-        // Front face (z = 1.0)
-        glColor3f(1.0f, 0.0f, 0.0f); // Red
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
+    // Front face
+    glNormal3f(0.0f, 0.0f, 1.0f); // Normal facing in the positive Z direction
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+    glVertex3f(1.0f, -1.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, 1.0f);
 
-        // Back face (z = -1.0)
-        glColor3f(0.0f, 1.0f, 0.0f); // Green
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
+    // Back face
+    glNormal3f(0.0f, 0.0f, -1.0f); // Normal facing in the negative Z direction
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
 
-        // Left face (x = -1.0)
-        glColor3f(0.0f, 0.0f, 1.0f); // Blue
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
+    // Left face
+    glNormal3f(-1.0f, 0.0f, 0.0f); // Normal facing in the negative X direction
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
 
-        // Right face (x = 1.0)
-        glColor3f(1.0f, 1.0f, 0.0f); // Yellow
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
+    // Right face
+    glNormal3f(1.0f, 0.0f, 0.0f); // Normal facing in the positive X direction
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glVertex3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(1.0f, -1.0f, 1.0f);
 
-        // Top face (y = 1.0)
-        glColor3f(0.0f, 1.0f, 1.0f); // Cyan
-        glVertex3f(-1.0f, 1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
+    // Top face
+    glNormal3f(0.0f, 1.0f, 0.0f); // Normal facing in the positive Y direction
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glVertex3f(-1.0f, 1.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
 
-        // Bottom face (y = -1.0)
-        glColor3f(1.0f, 0.0f, 1.0f); // Magenta
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
+    // Bottom face
+    glNormal3f(0.0f, -1.0f, 0.0f); // Normal facing in the negative Y direction
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glVertex3f(1.0f, -1.0f, 1.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
 
-        glEnd();
+    glEnd();
 
-        glPopMatrix(); // Restore transformation state
-    }
+    glPopMatrix(); // Restore the previous transformation state
+}
+
 };
 
 int currObject;
 json jsonData;
 Cube* objectToMove;
 std::vector<Cube*> cubes;
+int change_all = 0;
 
 void init() {
     glEnable(GL_DEPTH_TEST); // Enable depth testing
+
+    // Enable lighting
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+
+    // Set light properties
+    GLfloat light_position[] = {0.0, 1.0, 1.0, 0.0}; // Directional light
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+    GLfloat ambient_light[] = {0.2, 0.2, 0.2, 1.0};
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
+
+    GLfloat diffuse_light[] = {1.0, 1.0, 1.0, 1.0};
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse_light);
+
+    GLfloat specular_light[] = {1.0, 1.0, 1.0, 1.0};
+    glLightfv(GL_LIGHT0, GL_SPECULAR, specular_light);
 }
 
 void display() {
@@ -174,17 +208,46 @@ void reshape(int w, int h) {
 void specialKeys(int key, int x, int y) {
     switch (key) {
         case GLUT_KEY_RIGHT:
-            objectToMove->rotate(0.0f, 5.0f, 0.0f);
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->rotate(0.0f, 5.0f, 0.0f);
+                }
+            } else {
+                objectToMove->rotate(0.0f, 5.0f, 0.0f);
+            }
             break;
+
         case GLUT_KEY_LEFT:
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->rotate(0.0f, -5.0f, 0.0f);
+                }
+            }
+            else{
             objectToMove->rotate(0.0f, -5.0f, 0.0f);
+            }
             break;
+
         case GLUT_KEY_UP:
-            objectToMove->rotate(-5.0f, 0.0f, 0.0f);
-            break;
-        case GLUT_KEY_DOWN:
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->rotate(5.0f, 0.0f, 0.0f);
+                }
+            }
+            else{
             objectToMove->rotate(5.0f, 0.0f, 0.0f);
+            }
             break;
+            
+        case GLUT_KEY_DOWN:
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->rotate(-5.0f, 0.0f, 0.0f);
+                }
+            }
+            else{
+            objectToMove->rotate(-5.0f, 0.0f, 0.0f);
+            }
             
     }
     glutPostRedisplay();
@@ -192,23 +255,74 @@ void specialKeys(int key, int x, int y) {
 
 void normalKeys(unsigned char key, int x, int y) {
     switch (key) {
+        case 'c':
+            if (change_all){
+                change_all = 0;
+            }
+            else{
+                change_all = 1;
+            }
+            break;
         case 'w':
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->translate(0.0f, 0.0f, 0.1f);
+                }
+            }
+            else{
             objectToMove->translate(0.0f, 0.0f, 0.1f);
+            }
             break;
         case 's':
-            objectToMove->translate(0.0f, 0.0f, -0.1f);
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->translate(0.0f, 0.0f, -0.1f);
+                }
+            }
+            else{
+                objectToMove->translate(0.0f, 0.0f, -0.1f);
+            }
             break;
         case 'a':
-            objectToMove->translate(-0.1f, 0.0f, 0.0f);
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->translate(-0.1f, 0.0f, 0.0f);
+                }
+            }
+            else{
+                objectToMove->translate(-0.1f, 0.0f, 0.0f);
+            }
             break;
         case 'd':
-            objectToMove->translate(0.1f, 0.0f, 0.0f);
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->translate(0.1f, 0.0f, 0.0f);
+                }
+            }
+            else {
+                objectToMove->translate(0.1f, 0.0f, 0.0f);
+            }
             break;
         case 'q':
-            objectToMove->translate(0.0f, 0.1f, 0.0f);
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->translate(0.0f, 0.1f, 0.0f);
+                }
+            }
+            else {
+                objectToMove->translate(0.0f, 0.1f, 0.0f);
+            }
+            break;
             break;
         case 'e':
-            objectToMove->translate(0.0f, -0.1f, 0.0f);
+            if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->translate(0.0f, -0.1f, 0.0f);
+                }
+            }
+            else{
+                objectToMove->translate(0.0f, -0.1f, 0.0f);
+            }
             break;
         case 'l':
             objectToMove->log();
@@ -251,7 +365,7 @@ void normalKeys(unsigned char key, int x, int y) {
         case ';':
         {
             std::string cubeName = "Cube" + std::to_string(cubes.size());
-            cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName));
+            cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName, 0.0, 0.0, 0.0));
             break;
         }
 
@@ -261,6 +375,7 @@ void normalKeys(unsigned char key, int x, int y) {
                 jsonData[cube->getName()]["Position"] = cube->getPosition();
                 jsonData[cube->getName()]["Rotation"] = cube->getRotation();
                 jsonData[cube->getName()]["Dimensions"] = cube->getDimmensions();
+                jsonData[cube->getName()]["Color"] = cube->getColor();
             }
             std::string jsonString = jsonData.dump(4);  // 4 spaces for indentation
             std::cout << "JSON Output:\n" << jsonString << std::endl;
@@ -304,6 +419,7 @@ int main(int argc, char** argv) {
         auto position = value["Position"];
         auto rotation = value["Rotation"];
         auto dimensions = value["Dimensions"];
+        auto color = value["Color"];
 
         // Create the object
         if (type == "Cube") {
@@ -316,7 +432,10 @@ int main(int argc, char** argv) {
             float w = dimensions[0];
             float h = dimensions[1];
             float l = dimensions[2];
-            cubes.push_back(new Cube(x, y, z, rx, ry, rz, w, h, l, key));
+            float red = color[0];
+            float green = color[1];
+            float blue = color[2];
+            cubes.push_back(new Cube(x, y, z, rx, ry, rz, w, h, l, key, red, green, blue));
         }
     }
 
@@ -326,7 +445,7 @@ int main(int argc, char** argv) {
     // Create window and start rednering loop
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(800, 600);
+    glutInitWindowSize(650, 600);
     glutCreateWindow("Cube with Class");
 
     init();
