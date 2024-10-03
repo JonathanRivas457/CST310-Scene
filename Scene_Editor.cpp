@@ -67,7 +67,7 @@ public:
     }
 
     std::array<float, 3> getColor() {
-        return {redVal, greenVal, blueVal};
+        return {redVal * 255, greenVal * 255, blueVal * 255};
     }
 
     std::string getName(){
