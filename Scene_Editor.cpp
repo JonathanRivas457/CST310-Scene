@@ -98,8 +98,8 @@ public:
     GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
     glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
 
-    GLfloat material_specular[] = {1.0, 1.0, 1.0, 1.0}; // Specular color
-    glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
+    // GLfloat material_specular[] = {1.0, 1.0, 1.0, 1.0}; // Specular color
+    // glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
 
     GLfloat shininess[] = {50.0}; // Shininess coefficient
     glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
@@ -142,14 +142,14 @@ public:
     glVertex3f(1.0f, -1.0f, 1.0f);
 
     // Top face
-    glNormal3f(0.0f, 1.0f, 0.0f); // Normal facing in the positive Y direction
+    glNormal3f(0.0f, -1.0f, 0.0f); // Normal facing in the negative Y direction
     glVertex3f(-1.0f, 1.0f, -1.0f);
     glVertex3f(-1.0f, 1.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, -1.0f);
 
     // Bottom face
-    glNormal3f(0.0f, -1.0f, 0.0f); // Normal facing in the negative Y direction
+    glNormal3f(0.0f, 1.0f, 0.0f); // Normal facing in the positive Y direction
     glVertex3f(-1.0f, -1.0f, -1.0f);
     glVertex3f(1.0f, -1.0f, -1.0f);
     glVertex3f(1.0f, -1.0f, 1.0f);
