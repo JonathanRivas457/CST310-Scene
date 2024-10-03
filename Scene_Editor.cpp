@@ -7,6 +7,8 @@
 
 // For convenience
 using json = nlohmann::json;
+GLfloat lightPos[] = {0.0f, 5.0f, 5.0f, 1.0f}; // Light position
+int moveLighting = 0;
 
 class Cube {
 private:
@@ -166,6 +168,20 @@ Cube* objectToMove;
 std::vector<Cube*> cubes;
 int change_all = 0;
 
+void drawLightIndicator() {
+    glPushMatrix();
+    glColor3f(1.0f, 1.0f, 0.0f);  // Set color for the light indicator (e.g., yellow)
+    glTranslatef(lightPos[0], lightPos[1], lightPos[2]);  // Move to light position
+
+    // Draw a small sphere
+    GLUquadric* quad = gluNewQuadric();
+    gluSphere(quad, 2.0f, 10, 10);  // Radius of 0.1, with 10 slices and stacks
+    gluDeleteQuadric(quad);
+    
+    glPopMatrix();
+}
+
+
 void init() {
     glEnable(GL_DEPTH_TEST); // Enable depth testing
 
@@ -174,8 +190,7 @@ void init() {
     glEnable(GL_LIGHT0);
 
     // Set light properties
-    GLfloat light_position[] = {0.0, 1.0, 1.0, 0.0}; // Directional light
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 
     GLfloat ambient_light[] = {0.2, 0.2, 0.2, 1.0};
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
@@ -194,6 +209,8 @@ void display() {
     for (Cube* cube : cubes) {
         cube->draw();
     }
+
+    drawLightIndicator();
     glutSwapBuffers();
 }
 
@@ -212,7 +229,9 @@ void specialKeys(int key, int x, int y) {
                 for (Cube* cube : cubes) {
                     cube->rotate(0.0f, 5.0f, 0.0f);
                 }
-            } else {
+            } 
+            
+            else {
                 objectToMove->rotate(0.0f, 5.0f, 0.0f);
             }
             break;
@@ -256,109 +275,122 @@ void specialKeys(int key, int x, int y) {
 void normalKeys(unsigned char key, int x, int y) {
     switch (key) {
         case 'c':
-            if (change_all){
-                change_all = 0;
-            }
-            else{
-                change_all = 1;
-            }
+            change_all = !change_all; // Toggle change_all
             break;
+
         case 'w':
             if (change_all) {
                 for (Cube* cube : cubes) {
                     cube->translate(0.0f, 0.0f, 0.1f);
                 }
-            }
-            else{
-            objectToMove->translate(0.0f, 0.0f, 0.1f);
+            } else if (moveLighting) {
+                lightPos[2] += 0.1f; // Move light in the z direction
+                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
+            } else {
+                objectToMove->translate(0.0f, 0.0f, 0.1f);
             }
             break;
+
         case 's':
             if (change_all) {
                 for (Cube* cube : cubes) {
                     cube->translate(0.0f, 0.0f, -0.1f);
                 }
-            }
-            else{
+            } else if (moveLighting) {
+                lightPos[2] -= 0.1f; // Move light in the negative z direction
+                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
+            } else {
                 objectToMove->translate(0.0f, 0.0f, -0.1f);
             }
             break;
+
         case 'a':
             if (change_all) {
                 for (Cube* cube : cubes) {
                     cube->translate(-0.1f, 0.0f, 0.0f);
                 }
-            }
-            else{
+            } else if (moveLighting) {
+                lightPos[0] -= 0.1f; // Move light in the negative x direction
+                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
+            } else {
                 objectToMove->translate(-0.1f, 0.0f, 0.0f);
             }
             break;
+
         case 'd':
             if (change_all) {
                 for (Cube* cube : cubes) {
                     cube->translate(0.1f, 0.0f, 0.0f);
                 }
-            }
-            else {
+            } else if (moveLighting) {
+                lightPos[0] += 0.1f; // Move light in the x direction
+                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
+            } else {
                 objectToMove->translate(0.1f, 0.0f, 0.0f);
             }
             break;
+
         case 'q':
             if (change_all) {
                 for (Cube* cube : cubes) {
                     cube->translate(0.0f, 0.1f, 0.0f);
                 }
-            }
-            else {
+            } else if (moveLighting) {
+                lightPos[1] += 0.1f; // Move light in the y direction
+                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
+            } else {
                 objectToMove->translate(0.0f, 0.1f, 0.0f);
             }
             break;
-            break;
+
         case 'e':
             if (change_all) {
                 for (Cube* cube : cubes) {
                     cube->translate(0.0f, -0.1f, 0.0f);
                 }
-            }
-            else{
+            } else if (moveLighting) {
+                lightPos[1] -= 0.1f; // Move light in the negative y direction
+                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
+            } else {
                 objectToMove->translate(0.0f, -0.1f, 0.0f);
             }
             break;
+
         case 'l':
             objectToMove->log();
             break;
-        
+
+        case 'u':
+            moveLighting = !moveLighting; // Toggle moveLighting
+            std::cout << (moveLighting ? "Lighting ON" : "Lighting OFF") << std::endl;
+            break;
+
         case '1':
             objectToMove->resize(0.05f, 0.0f, 0.0f);
             break;
-        
-        case '2': 
+
+        case '2':
             objectToMove->resize(-0.05f, 0.0f, 0.0f);
             break;
-        
+
         case '3':
             objectToMove->resize(0.0f, 0.05f, 0.0f);
             break;
-        
+
         case '4':
             objectToMove->resize(0.0f, -0.05f, 0.0f);
             break;
-        
+
         case '5':
             objectToMove->resize(0.0f, 0.0f, 0.05f);
             break;
-        
+
         case '6':
             objectToMove->resize(0.0f, 0.0f, -0.1f);
             break;
-        
+
         case '/':
-            if (currObject < cubes.size() - 1) {
-                currObject++;
-            } else
-            {
-                currObject = 0;
-            }
+            currObject = (currObject < cubes.size() - 1) ? currObject + 1 : 0; // Cycle through cubes
             objectToMove = cubes[currObject];
             break;
 
@@ -385,13 +417,13 @@ void normalKeys(unsigned char key, int x, int y) {
                 file << jsonString;
                 file.close();
                 std::cout << "JSON file saved successfully." << std::endl;
-            } 
-            else {
+            } else {
                 std::cerr << "Failed to open JSON file for writing." << std::endl;
             }
-            break;  // Ensure break here
+            break; // Ensure break here
     }
-    glutPostRedisplay();
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos); // Update light position in OpenGL
+    glutPostRedisplay(); // Request a redraw
 }
 
 
