@@ -21,7 +21,7 @@
             0.0
         ],
         "Type": "Cube",
-        "LightSource": 0
+        "LightSource": 2
     },
     "BackgroundWall": {
         "Color": [
@@ -45,7 +45,7 @@
             0.0
         ],
         "Type": "Cube",
-        "LightSource": 0
+        "LightSource": 2
     },
     "DeskBottomDrawer": {
         "Color": [
@@ -213,7 +213,7 @@
             0.0
         ],
         "Type": "Cube",
-        "LightSource": 2
+        "LightSource":0
     },
     "ForegroundWallCorner": {
         "Color": [
