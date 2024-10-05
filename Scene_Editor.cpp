@@ -7,7 +7,8 @@
 
 // For convenience
 using json = nlohmann::json;
-GLfloat lightPos[] = {0.0f, 5.0f, 5.0f, 1.0f}; // Light position
+GLfloat lightPos[] = {-2.7f, -2.1f, 3.3f, 1.0f}; // Light position
+GLfloat lightPos0[] = {-2.7f, -2.1f, 3.3f, 1.0f}; // Light position
 int moveLighting = 0;
 
 class Cube {
@@ -17,30 +18,39 @@ private:
     float size;             // Size of the cube
     float width, height, length; // Dimensions of the cube
     float redVal, greenVal, blueVal; // Color of the cube
+    int lightsource;
     std::string name; // Name of the cube
 
 
 public:
     // constructor for the cube
     Cube(float x = 0.0f, float y = 0.0f, float z = -5.0f, 
-         float w = 1.0f, float h = 1.0f, float l = 1.0f, float red = 1.0f, float green = 1.0f, float blue = 1.0f)
+         float w = 1.0f, float h = 1.0f, float l = 1.0f, float red = 1.0f, float green = 1.0f, float blue = 1.0f,
+         int lighting = 0)
         : posX(x), posY(y), posZ(z), rotX(0.0f), rotY(0.0f), rotZ(0.0f), 
-          width(w), height(h), length(l), redVal(red), greenVal(green), blueVal(blue) {}
+          width(w), height(h), length(l), redVal(red), greenVal(green), blueVal(blue), lightsource(lighting) {}
     
     // Parameterized constructor (takes position, rotation, and dimensions)
     Cube(float x, float y, float z, 
          float rx, float ry, float rz, 
-         float w, float h, float l, const std::string& cubeName, float red, float green, float blue) 
+         float w, float h, float l, const std::string& cubeName, float red, float green, float blue,
+         int light) 
         : posX(x), posY(y), posZ(z), // Set position
           rotX(rx), rotY(ry), rotZ(rz), // Set rotation
           width(w), height(h), length(l), // Set dimensions
           redVal(red/255), greenVal(green/255), blueVal(blue/255), // Set color
-          name(cubeName) // set name
+          name(cubeName),
+          lightsource(light) // set name
     {}
 
     // Methods to modify the cube's position and rotation
     void setPosition(float x, float y, float z) {
         posX = x; posY = y; posZ = z;
+    }
+
+    // getLight Source
+    int getLightSource(){
+        return lightsource;
     }
 
     // Method to modify the cube's position and rotation
@@ -94,15 +104,19 @@ public:
 
     // Method to draw the cube
     void draw() {
-    // Set material properties for shading
-    GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
 
-    // GLfloat material_specular[] = {1.0, 1.0, 1.0, 1.0}; // Specular color
-    // glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
+    if (lightsource != 0){
+        // Set material properties for shading
 
-    GLfloat shininess[] = {50.0}; // Shininess coefficient
-    glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+        GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
+        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material_diffuse);
+
+        // GLfloat material_specular[] = {1.0, 1.0, 1.0, 1.0}; // Specular color
+        // glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
+
+        GLfloat shininess[] = {10.0}; // Shininess coefficient
+        glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
+    }
 
     glPushMatrix(); // Save current transformation state
     glTranslatef(posX, posY, posZ);  // Move cube to its position
@@ -142,14 +156,14 @@ public:
     glVertex3f(1.0f, -1.0f, 1.0f);
 
     // Top face
-    glNormal3f(0.0f, -1.0f, 0.0f); // Normal facing in the negative Y direction
+    glNormal3f(0.0f, 1.0f, 0.0f); // Normal facing in the negative Y direction
     glVertex3f(-1.0f, 1.0f, -1.0f);
     glVertex3f(-1.0f, 1.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, -1.0f);
 
     // Bottom face
-    glNormal3f(0.0f, 1.0f, 0.0f); // Normal facing in the positive Y direction
+    glNormal3f(0.0f, -1.0f, 0.0f); // Normal facing in the positive Y direction
     glVertex3f(-1.0f, -1.0f, -1.0f);
     glVertex3f(1.0f, -1.0f, -1.0f);
     glVertex3f(1.0f, -1.0f, 1.0f);
@@ -185,12 +199,12 @@ void drawLightIndicator() {
 void init() {
     glEnable(GL_DEPTH_TEST); // Enable depth testing
 
-    // Enable lighting
+    // Enable lighting and light 0
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 
     // Set light properties
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
 
     GLfloat ambient_light[] = {0.2, 0.2, 0.2, 1.0};
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
@@ -200,6 +214,23 @@ void init() {
 
     GLfloat specular_light[] = {1.0, 1.0, 1.0, 1.0};
     glLightfv(GL_LIGHT0, GL_SPECULAR, specular_light);
+
+    glEnable(GL_LIGHT0);
+
+    // Set light properties
+    glEnable(GL_LIGHT1);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPos);
+
+    GLfloat ambient_light1[] = {0.2, 0.2, 0.2, 1.0};
+    glLightfv(GL_LIGHT1, GL_AMBIENT, ambient_light1);
+
+    GLfloat diffuse_light1[] = {1.0, 1.0, 1.0, 1.0};
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuse_light1);
+
+    GLfloat specular_light1[] = {1.0, 1.0, 1.0, 1.0};
+    glLightfv(GL_LIGHT1, GL_SPECULAR, specular_light1);
+
+
 }
 
 void display() {
@@ -207,10 +238,44 @@ void display() {
     glLoadIdentity();
 
     for (Cube* cube : cubes) {
+        // Set material properties based on the cube's color
+        GLfloat mat_color[] = {
+            cube->getColor()[0] / 255.0f,
+            cube->getColor()[1] / 255.0f,
+            cube->getColor()[2] / 255.0f,
+            1.0f
+        };
+        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_color);
+        
+        // Enable light based on the cube's light source
+        if (cube->getLightSource() == 1) {
+            glEnable(GL_LIGHTING);
+            glEnable(GL_LIGHT0);
+            glDisable(GL_LIGHT1);
+        } else if (cube->getLightSource() == 2) {
+            glEnable(GL_LIGHTING);
+            glDisable(GL_LIGHT0);
+            glEnable(GL_LIGHT1);
+        } else if (cube->getLightSource() == 0) {
+            // If the cube doesn't use any light, disable both lights
+            // Disable lighting for this cube
+            glDisable(GL_LIGHTING);
+            // Set the color directly for rendering without lighting
+            glColor3f(cube->getColor()[0]/255, cube->getColor()[1]/255, cube->getColor()[2]/255);
+            std::cout << "Color: " 
+          << (cube->getColor()[0]) << ", " 
+          << (cube->getColor()[1]) << ", " 
+          << (cube->getColor()[2]) << std::endl;
+        }
+
+        // Draw the cube
         cube->draw();
     }
 
-    drawLightIndicator();
+    // Ensure lights are disabled after drawing
+    glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHT1);
+
     glutSwapBuffers();
 }
 
@@ -397,7 +462,7 @@ void normalKeys(unsigned char key, int x, int y) {
         case ';':
         {
             std::string cubeName = "Cube" + std::to_string(cubes.size());
-            cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName, 0.0, 0.0, 0.0));
+            cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName, 0.0, 0.0, 0.0, 0));
             break;
         }
 
@@ -422,7 +487,7 @@ void normalKeys(unsigned char key, int x, int y) {
             }
             break; // Ensure break here
     }
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPos); // Update light position in OpenGL
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPos); // Update light position in OpenGL
     glutPostRedisplay(); // Request a redraw
 }
 
@@ -452,6 +517,7 @@ int main(int argc, char** argv) {
         auto rotation = value["Rotation"];
         auto dimensions = value["Dimensions"];
         auto color = value["Color"];
+        int lightSource = value["LightSource"];
 
         // Create the object
         if (type == "Cube") {
@@ -467,7 +533,7 @@ int main(int argc, char** argv) {
             float red = color[0];
             float green = color[1];
             float blue = color[2];
-            cubes.push_back(new Cube(x, y, z, rx, ry, rz, w, h, l, key, red, green, blue));
+            cubes.push_back(new Cube(x, y, z, rx, ry, rz, w, h, l, key, red, green, blue, lightSource));
         }
     }
 
