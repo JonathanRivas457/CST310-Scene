@@ -7,9 +7,26 @@
 
 // For convenience
 using json = nlohmann::json;
-GLfloat lightPos[] = {-2.7f, -2.1f, 3.3f, 1.0f}; // Light position
-GLfloat lightPos0[] = {-2.7f, -2.1f, 3.3f, 1.0f}; // Light position
+
+GLfloat lightPos[] = {10.7f, -1.3f, -7.1f, 1.0f}; 
+GLfloat lightPos0[] = {-2.7f, -1.7f, 3.5f, 1.0f};
+
+
+// Create a 2D array to store both light positions
+GLfloat lightPositions[2][4] = {
+    {-2.7f, -2.1f, 3.3f, 1.0f},  // lightPos
+    {10.7f, -0.9f, -6.8f, 1.0f}   // lightPos0
+};
+
+GLfloat lightRotations[2][3] = {
+    {0.0f, 0.0f, 0.0f},
+    {0.0f, 0.0f, 0.0f}
+};
+
+
+int light_to_move = 0;
 int moveLighting = 0;
+int rotate = 0;
 
 class Cube {
 private:
@@ -104,18 +121,14 @@ public:
 
     // Method to draw the cube
     void draw() {
-
     if (lightsource != 0){
         // Set material properties for shading
 
         GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
-        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material_diffuse);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
 
-        // GLfloat material_specular[] = {1.0, 1.0, 1.0, 1.0}; // Specular color
-        // glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
-
-        GLfloat shininess[] = {10.0}; // Shininess coefficient
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
+        GLfloat shininess[] = {100.0}; // Shininess coefficient
+        glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
     }
 
     glPushMatrix(); // Save current transformation state
@@ -126,51 +139,101 @@ public:
     glScalef(width, height, length); // Scale the cube
 
     glBegin(GL_QUADS);
-    
-    // Front face
-    glNormal3f(0.0f, 0.0f, 1.0f); // Normal facing in the positive Z direction
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
 
-    // Back face
-    glNormal3f(0.0f, 0.0f, -1.0f); // Normal facing in the negative Z direction
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
+    if (lightsource == -1) {
+        // Front face
+        glColor3f(1.0f, 0.0f, 0.0f);  // Red
+        glNormal3f(-1.0f, 0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
 
-    // Left face
-    glNormal3f(-1.0f, 0.0f, 0.0f); // Normal facing in the negative X direction
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
+        // Back face
+        glColor3f(0.0f, 1.0f, 0.0f);  // Green
+        glNormal3f(0.0f, 0.0f, -1.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
 
-    // Right face
-    glNormal3f(1.0f, 0.0f, 0.0f); // Normal facing in the positive X direction
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
+        // Left face
+        glColor3f(0.0f, 0.0f, 1.0f);  // Blue
+        glNormal3f(0.0f, 0.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
 
-    // Top face
-    glNormal3f(0.0f, 1.0f, 0.0f); // Normal facing in the negative Y direction
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
+        // Right face
+        glColor3f(1.0f, 1.0f, 0.0f);  // Yellow
+        glNormal3f(1.0f, 0.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
 
-    // Bottom face
-    glNormal3f(0.0f, -1.0f, 0.0f); // Normal facing in the positive Y direction
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
+        // Top face
+        glColor3f(1.0f, 0.0f, 1.0f);  // Magenta
+        glNormal3f(0.0f, 1.0f, 0.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+
+        // Bottom face
+        glColor3f(0.0f, 1.0f, 1.0f);  // Cyan
+        glNormal3f(0.0f, -1.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+    } else {
+        // Draw as before if lightsource != 0
+        // Front face
+        glNormal3f(0.0f, 0.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+
+        // Back face
+        glNormal3f(0.0f, 0.0f, -1.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+
+        // Left face
+        glNormal3f(-1.0f, 0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+
+        // Right face
+        glNormal3f(1.0f, 0.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+
+        // Top face
+        glNormal3f(0.0f, 1.0f, 0.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+
+        // Bottom face
+        glNormal3f(0.0f, -1.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+    }
 
     glEnd();
-
     glPopMatrix(); // Restore the previous transformation state
 }
 
@@ -183,28 +246,83 @@ std::vector<Cube*> cubes;
 int change_all = 0;
 
 void drawLightIndicator() {
-    glPushMatrix();
-    glColor3f(1.0f, 1.0f, 0.0f);  // Set color for the light indicator (e.g., yellow)
-    glTranslatef(lightPos[0], lightPos[1], lightPos[2]);  // Move to light position
+    glPushMatrix();  // Save current transformation state
 
-    // Draw a small sphere
-    GLUquadric* quad = gluNewQuadric();
-    gluSphere(quad, 2.0f, 10, 10);  // Radius of 0.1, with 10 slices and stacks
-    gluDeleteQuadric(quad);
-    
-    glPopMatrix();
+    // Apply the same rotation as the light
+    glRotatef(lightRotations[light_to_move][0], 1.0f, 0.0f, 0.0f);  // Rotate around X
+    glRotatef(lightRotations[light_to_move][1], 0.0f, 1.0f, 0.0f);  // Rotate around Y
+    glRotatef(lightRotations[light_to_move][2], 0.0f, 0.0f, 1.0f);  // Rotate around Z
+
+    // Move to the light position
+    glTranslatef(lightPositions[light_to_move][0], lightPositions[light_to_move][1], lightPositions[light_to_move][2]);
+
+    // Draw the cube, starting with different colors for each face
+    glBegin(GL_QUADS);
+
+    // Front face (direction of light)
+    glColor3f(1.0f, 1.0f, 0.0f);  // Yellow to indicate light emanation
+    glVertex3f(-1.0f, -1.0f,  1.0f);
+    glVertex3f( 1.0f, -1.0f,  1.0f);
+    glVertex3f( 1.0f,  1.0f,  1.0f);
+    glVertex3f(-1.0f,  1.0f,  1.0f);
+
+    // Back face
+    glColor3f(1.0f, 0.0f, 0.0f);  // Red
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f,  1.0f, -1.0f);
+    glVertex3f( 1.0f,  1.0f, -1.0f);
+    glVertex3f( 1.0f, -1.0f, -1.0f);
+
+    // Top face
+    glColor3f(0.0f, 1.0f, 0.0f);  // Green
+    glVertex3f(-1.0f,  1.0f, -1.0f);
+    glVertex3f(-1.0f,  1.0f,  1.0f);
+    glVertex3f( 1.0f,  1.0f,  1.0f);
+    glVertex3f( 1.0f,  1.0f, -1.0f);
+
+    // Bottom face
+    glColor3f(0.0f, 0.0f, 1.0f);  // Blue
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f( 1.0f, -1.0f, -1.0f);
+    glVertex3f( 1.0f, -1.0f,  1.0f);
+    glVertex3f(-1.0f, -1.0f,  1.0f);
+
+    // Right face
+    glColor3f(1.0f, 0.5f, 0.0f);  // Orange
+    glVertex3f( 1.0f, -1.0f, -1.0f);
+    glVertex3f( 1.0f,  1.0f, -1.0f);
+    glVertex3f( 1.0f,  1.0f,  1.0f);
+    glVertex3f( 1.0f, -1.0f,  1.0f);
+
+    // Left face
+    glColor3f(0.5f, 0.0f, 1.0f);  // Purple
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f,  1.0f);
+    glVertex3f(-1.0f,  1.0f,  1.0f);
+    glVertex3f(-1.0f,  1.0f, -1.0f);
+
+    glEnd();
+
+    glPopMatrix();  // Restore the transformation state
 }
+
 
 
 void init() {
     glEnable(GL_DEPTH_TEST); // Enable depth testing
 
-    // Enable lighting and light 0
+    // Enable lighting
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
 
-    // Set light properties
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    // Setup light 0
+    glPushMatrix(); // Save current matrix
+    glRotatef(lightRotations[0][0], 1.0f, 0.0f, 0.0f);
+    glRotatef(lightRotations[0][1], 0.0f, 1.0f, 0.0f);
+    glRotatef(lightRotations[0][2], 0.0f, 0.0f, 1.0f);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositions[0]);
+    glPopMatrix(); // Restore matrix
 
     GLfloat ambient_light[] = {0.2, 0.2, 0.2, 1.0};
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
@@ -215,11 +333,13 @@ void init() {
     GLfloat specular_light[] = {1.0, 1.0, 1.0, 1.0};
     glLightfv(GL_LIGHT0, GL_SPECULAR, specular_light);
 
-    glEnable(GL_LIGHT0);
-
-    // Set light properties
-    glEnable(GL_LIGHT1);
-    glLightfv(GL_LIGHT1, GL_POSITION, lightPos);
+    // Setup light 1
+    glPushMatrix(); // Save current matrix
+    glRotatef(lightRotations[1][0], 1.0f, 0.0f, 0.0f);
+    glRotatef(lightRotations[1][1], 0.0f, 1.0f, 0.0f);
+    glRotatef(lightRotations[1][2], 0.0f, 0.0f, 1.0f);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositions[1]);
+    glPopMatrix(); // Restore matrix
 
     GLfloat ambient_light1[] = {0.2, 0.2, 0.2, 1.0};
     glLightfv(GL_LIGHT1, GL_AMBIENT, ambient_light1);
@@ -229,43 +349,51 @@ void init() {
 
     GLfloat specular_light1[] = {1.0, 1.0, 1.0, 1.0};
     glLightfv(GL_LIGHT1, GL_SPECULAR, specular_light1);
-
-
 }
 
 void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
+    // Apply rotation to the lights before rendering cubes
+    // Light 0 Rotation
+    glPushMatrix(); // Save the current matrix state
+    glRotatef(lightRotations[0][0], 1.0f, 0.0f, 0.0f); // Rotate around X
+    glRotatef(lightRotations[0][1], 0.0f, 1.0f, 0.0f); // Rotate around Y
+    glRotatef(lightRotations[0][2], 0.0f, 0.0f, 1.0f); // Rotate around Z
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositions[0]); // Apply the light position after rotation
+    glPopMatrix(); // Restore the previous matrix state
+
+    // Light 1 Rotation
+    glPushMatrix();
+    glRotatef(lightRotations[1][0], 1.0f, 0.0f, 0.0f); // Rotate around X
+    glRotatef(lightRotations[1][1], 0.0f, 1.0f, 0.0f); // Rotate around Y
+    glRotatef(lightRotations[1][2], 0.0f, 0.0f, 1.0f); // Rotate around Z
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositions[1]); // Apply the light position after rotation
+    glPopMatrix();
+    
     for (Cube* cube : cubes) {
-        // Set material properties based on the cube's color
-        GLfloat mat_color[] = {
-            cube->getColor()[0] / 255.0f,
-            cube->getColor()[1] / 255.0f,
-            cube->getColor()[2] / 255.0f,
-            1.0f
-        };
-        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_color);
         
         // Enable light based on the cube's light source
         if (cube->getLightSource() == 1) {
             glEnable(GL_LIGHTING);
             glEnable(GL_LIGHT0);
             glDisable(GL_LIGHT1);
+            std::cout << "Color: " 
+          << (cube->getColor()[0]) << ", " 
+          << (cube->getColor()[1]) << ", " 
+          << (cube->getColor()[2]) << std::endl;
         } else if (cube->getLightSource() == 2) {
             glEnable(GL_LIGHTING);
             glDisable(GL_LIGHT0);
             glEnable(GL_LIGHT1);
+            
         } else if (cube->getLightSource() == 0) {
             // If the cube doesn't use any light, disable both lights
             // Disable lighting for this cube
             glDisable(GL_LIGHTING);
             // Set the color directly for rendering without lighting
             glColor3f(cube->getColor()[0]/255, cube->getColor()[1]/255, cube->getColor()[2]/255);
-            std::cout << "Color: " 
-          << (cube->getColor()[0]) << ", " 
-          << (cube->getColor()[1]) << ", " 
-          << (cube->getColor()[2]) << std::endl;
         }
 
         // Draw the cube
@@ -275,6 +403,7 @@ void display() {
     // Ensure lights are disabled after drawing
     glDisable(GL_LIGHT0);
     glDisable(GL_LIGHT1);
+    drawLightIndicator();
 
     glutSwapBuffers();
 }
@@ -295,9 +424,13 @@ void specialKeys(int key, int x, int y) {
                     cube->rotate(0.0f, 5.0f, 0.0f);
                 }
             } 
+
+            else if (moveLighting == 1) {
+                lightRotations[light_to_move][0] += 5.0f;
+            }
             
             else {
-                objectToMove->rotate(0.0f, 5.0f, 0.0f);
+                objectToMove->rotate(-5.0f, 0.0f, 0.0f);
             }
             break;
 
@@ -307,8 +440,13 @@ void specialKeys(int key, int x, int y) {
                     cube->rotate(0.0f, -5.0f, 0.0f);
                 }
             }
+
+            else if (moveLighting == 1) {
+                lightRotations[light_to_move][0] -= 5.0f;
+            }
+
             else{
-            objectToMove->rotate(0.0f, -5.0f, 0.0f);
+            objectToMove->rotate(5.0f, 0.0f, 0.0f);
             }
             break;
 
@@ -318,19 +456,29 @@ void specialKeys(int key, int x, int y) {
                     cube->rotate(5.0f, 0.0f, 0.0f);
                 }
             }
+
+            else if (moveLighting == 1) {
+                lightRotations[light_to_move][2] += 5.0f;
+            }
+
             else{
-            objectToMove->rotate(5.0f, 0.0f, 0.0f);
+            objectToMove->rotate(0.0f, 0.0f, 5.0f);
             }
             break;
             
         case GLUT_KEY_DOWN:
             if (change_all) {
                 for (Cube* cube : cubes) {
-                    cube->rotate(-5.0f, 0.0f, 0.0f);
+                    cube->rotate(0.0f, 5.0f, 0.0f);
                 }
             }
+
+            else if (moveLighting == 1) {
+                lightRotations[light_to_move][1] -= 5.0f;
+            }
+
             else{
-            objectToMove->rotate(-5.0f, 0.0f, 0.0f);
+            objectToMove->rotate(0.0f, 5.0f, 0.0f);
             }
             
     }
@@ -343,81 +491,146 @@ void normalKeys(unsigned char key, int x, int y) {
             change_all = !change_all; // Toggle change_all
             break;
 
+        case 'r':
+            rotate = !rotate; // Toggle rotation mode
+            std::cout << (rotate ? "Rotation mode ON" : "Rotation mode OFF") << std::endl;
+            break;
+
         case 'w':
-            if (change_all) {
-                for (Cube* cube : cubes) {
-                    cube->translate(0.0f, 0.0f, 0.1f);
+            if (rotate) {
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->rotate(10.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                    }
+                } else {
+                    objectToMove->rotate(5.0f, 0.0f, 0.0f); // Rotate around the x-axis
                 }
-            } else if (moveLighting) {
-                lightPos[2] += 0.1f; // Move light in the z direction
-                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
             } else {
-                objectToMove->translate(0.0f, 0.0f, 0.1f);
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->translate(0.0f, 0.0f, 0.1f);
+                    }
+                } else if (moveLighting) {
+                    lightPositions[light_to_move][2] += 0.1f; // Move light in the z direction
+                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                } else {
+                    objectToMove->translate(0.0f, 0.0f, 0.1f);
+                }
             }
             break;
 
         case 's':
-            if (change_all) {
-                for (Cube* cube : cubes) {
-                    cube->translate(0.0f, 0.0f, -0.1f);
+            if (rotate) {
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->rotate(-10.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                    }
+                } else {
+                    objectToMove->rotate(-5.0f, 0.0f, 0.0f); // Rotate around the x-axis
                 }
-            } else if (moveLighting) {
-                lightPos[2] -= 0.1f; // Move light in the negative z direction
-                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
             } else {
-                objectToMove->translate(0.0f, 0.0f, -0.1f);
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->translate(0.0f, 0.0f, -0.1f);
+                    }
+                } else if (moveLighting) {
+                    lightPositions[light_to_move][2] -= 0.1f; // Move light in the negative z direction
+                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                } else {
+                    objectToMove->translate(0.0f, 0.0f, -0.1f);
+                }
             }
             break;
 
         case 'a':
-            if (change_all) {
-                for (Cube* cube : cubes) {
-                    cube->translate(-0.1f, 0.0f, 0.0f);
+            if (rotate) {
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->rotate(0.0f, 10.0f, 0.0f); // Rotate around the y-axis
+                    }
+                } else {
+                    objectToMove->rotate(0.0f, 5.0f, 0.0f); // Rotate around the y-axis
                 }
-            } else if (moveLighting) {
-                lightPos[0] -= 0.1f; // Move light in the negative x direction
-                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
             } else {
-                objectToMove->translate(-0.1f, 0.0f, 0.0f);
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->translate(-0.1f, 0.0f, 0.0f);
+                    }
+                } else if (moveLighting) {
+                    lightPositions[light_to_move][0] -= 0.1f; // Move light in the negative x direction
+                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                } else {
+                    objectToMove->translate(-0.1f, 0.0f, 0.0f);
+                }
             }
             break;
 
         case 'd':
-            if (change_all) {
-                for (Cube* cube : cubes) {
-                    cube->translate(0.1f, 0.0f, 0.0f);
+            if (rotate) {
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->rotate(0.0f, -5.0f, 0.0f); // Rotate around the y-axis
+                    }
+                } else {
+                    objectToMove->rotate(0.0f, -5.0f, 0.0f); // Rotate around the y-axis
                 }
-            } else if (moveLighting) {
-                lightPos[0] += 0.1f; // Move light in the x direction
-                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
             } else {
-                objectToMove->translate(0.1f, 0.0f, 0.0f);
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->translate(0.1f, 0.0f, 0.0f);
+                    }
+                } else if (moveLighting) {
+                    lightPositions[light_to_move][0] += 0.1f; // Move light in the x direction
+                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                } else {
+                    objectToMove->translate(0.1f, 0.0f, 0.0f);
+                }
             }
             break;
 
         case 'q':
-            if (change_all) {
-                for (Cube* cube : cubes) {
-                    cube->translate(0.0f, 0.1f, 0.0f);
+            if (rotate) {
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->rotate(0.0f, 0.0f, 10.0f); // Rotate around the z-axis
+                    }
+                } else {
+                    objectToMove->rotate(0.0f, 0.0f, 5.0f); // Rotate around the z-axis
                 }
-            } else if (moveLighting) {
-                lightPos[1] += 0.1f; // Move light in the y direction
-                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
             } else {
-                objectToMove->translate(0.0f, 0.1f, 0.0f);
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->translate(0.0f, 0.1f, 0.0f);
+                    }
+                } else if (moveLighting) {
+                    lightPositions[light_to_move][1] += 0.1f; // Move light in the y direction
+                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                } else {
+                    objectToMove->translate(0.0f, 0.1f, 0.0f);
+                }
             }
             break;
 
         case 'e':
-            if (change_all) {
-                for (Cube* cube : cubes) {
-                    cube->translate(0.0f, -0.1f, 0.0f);
+            if (rotate) {
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->rotate(0.0f, 0.0f, -10.0f); // Rotate around the z-axis
+                    }
+                } else {
+                    objectToMove->rotate(0.0f, 0.0f, -5.0f); // Rotate around the z-axis
                 }
-            } else if (moveLighting) {
-                lightPos[1] -= 0.1f; // Move light in the negative y direction
-                std::cout << "Lighting Position: (" << lightPos[0] << ", " << lightPos[1] << ", " << lightPos[2] << ")" << std::endl; // Print the position
             } else {
-                objectToMove->translate(0.0f, -0.1f, 0.0f);
+                if (change_all) {
+                    for (Cube* cube : cubes) {
+                        cube->translate(0.0f, -0.1f, 0.0f);
+                    }
+                } else if (moveLighting) {
+                    lightPositions[light_to_move][1] -= 0.1f; // Move light in the negative y direction
+                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                } else {
+                    objectToMove->translate(0.0f, -0.1f, 0.0f);
+                }
             }
             break;
 
@@ -462,7 +675,7 @@ void normalKeys(unsigned char key, int x, int y) {
         case ';':
         {
             std::string cubeName = "Cube" + std::to_string(cubes.size());
-            cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName, 0.0, 0.0, 0.0, 0));
+            cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName, 0.0, 0.0, 0.0, -1));
             break;
         }
 
@@ -473,6 +686,7 @@ void normalKeys(unsigned char key, int x, int y) {
                 jsonData[cube->getName()]["Rotation"] = cube->getRotation();
                 jsonData[cube->getName()]["Dimensions"] = cube->getDimmensions();
                 jsonData[cube->getName()]["Color"] = cube->getColor();
+                jsonData[cube->getName()]["LightSource"] = cube->getLightSource();
             }
             std::string jsonString = jsonData.dump(4);  // 4 spaces for indentation
             std::cout << "JSON Output:\n" << jsonString << std::endl;
@@ -487,7 +701,15 @@ void normalKeys(unsigned char key, int x, int y) {
             }
             break; // Ensure break here
     }
-    glLightfv(GL_LIGHT1, GL_POSITION, lightPos); // Update light position in OpenGL
+
+    if (light_to_move == 0) {
+        glLightfv(GL_LIGHT0, GL_POSITION, lightPositions[light_to_move]); // Update light position in OpenGL
+    }
+
+    else if (light_to_move == 1) {
+        glLightfv(GL_LIGHT1, GL_POSITION, lightPositions[light_to_move]); // Update light position in OpenGL
+    }
+    
     glutPostRedisplay(); // Request a redraw
 }
 
