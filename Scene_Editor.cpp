@@ -4,6 +4,8 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <array>
+#include <string>
 
 // For convenience
 using json = nlohmann::json;
@@ -121,7 +123,7 @@ public:
 
     // Method to draw the cube
     void draw() {
-    if (lightsource != 0){
+    if (lightsource > 0){
         // Set material properties for shading
 
         GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
@@ -239,10 +241,148 @@ public:
 
 };
 
+
+class Cylinder {
+private:
+    float posX, posY, posZ; // Position of the cylinder
+    float rotX, rotY, rotZ; // Rotation angles of the cylinder
+    float radius, height;   // Dimensions of the cylinder
+    float redVal, greenVal, blueVal; // Color of the cylinder
+    int lightsource;
+    std::string name; // Name of the cylinder
+
+public:
+    // Constructor for the cylinder
+    Cylinder(float x = 0.0f, float y = 0.0f, float z = -5.0f, 
+             float r = 1.0f, float h = 1.0f, float red = 1.0f, 
+             float green = 1.0f, float blue = 1.0f, int lighting = 0)
+        : posX(x), posY(y), posZ(z), rotX(0.0f), rotY(0.0f), rotZ(0.0f), 
+          radius(r), height(h), redVal(red), greenVal(green), blueVal(blue), lightsource(lighting) {}
+
+    // Parameterized constructor (takes position, rotation, and dimensions)
+    Cylinder(float x, float y, float z, 
+             float rx, float ry, float rz, 
+             float r, float h, const std::string& cylinderName, 
+             float red, float green, float blue, int light)
+        : posX(x), posY(y), posZ(z), 
+          rotX(rx), rotY(ry), rotZ(rz), 
+          radius(r), height(h), 
+          redVal(red / 255), greenVal(green / 255), blueVal(blue / 255), 
+          name(cylinderName), lightsource(light) {}
+
+    // Methods to modify the cylinder's position and rotation
+    void setPosition(float x, float y, float z) {
+        posX = x; posY = y; posZ = z;
+    }
+
+    // Get light source
+    int getLightSource() {
+        return lightsource;
+    }
+
+    // Method to modify the cylinder's dimensions
+    void setDimensions(float r, float h) {
+        radius = r; height = h;
+    }
+
+    void log() {
+        std::cout << posX << " " << posY << " " << posZ << std::endl;
+        std::cout << rotX << " " << rotY << " " << rotZ << std::endl;
+        std::cout << radius << " " << height << std::endl;
+    }
+
+    std::array<float, 3> getPosition() {
+        return {posX, posY, posZ};
+    }
+
+    std::array<float, 3> getRotation() {
+        return {rotX, rotY, rotZ};
+    }
+
+    std::array<float, 2> getDimensions() {
+        return {radius, height};
+    }
+
+    std::array<float, 3> getColor() {
+        return {redVal * 255, greenVal * 255, blueVal * 255};
+    }
+
+    std::string getName() {
+        return name;
+    }
+
+    void setRotation(float x, float y, float z) {
+        rotX = x; rotY = y; rotZ = z;
+    }
+
+    void translate(float dx, float dy, float dz) {
+        posX += dx; posY += dy; posZ += dz;
+    }
+
+    void rotate(float dx, float dy, float dz) {
+        rotX += dx; rotY += dy; rotZ += dz;
+    }
+
+    void resize(float dr, float dh) {
+        radius += dr; height += dh;
+    }
+
+    // Method to draw the cylinder
+    void draw() {
+    if (lightsource > 0) {
+        // Set material properties for shading
+        GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
+        GLfloat shininess[] = {100.0}; // Shininess coefficient
+        glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+    }
+
+    glPushMatrix(); // Save current transformation state
+    glTranslatef(posX, posY, posZ); // Move cylinder to its position
+    glRotatef(rotX, 1.0f, 0.0f, 0.0f); // Rotate cylinder around X axis
+    glRotatef(rotY, 0.0f, 1.0f, 0.0f); // Rotate cylinder around Y axis
+    glRotatef(rotZ, 0.0f, 0.0f, 1.0f); // Rotate cylinder around Z axis
+
+    // Draw the cylinder
+    GLUquadric* quadric = gluNewQuadric();
+    gluQuadricNormals(quadric, GLU_SMOOTH);
+    gluQuadricTexture(quadric, GL_TRUE); // If you want to apply textures
+    
+    // Draw the cylinder body
+    glColor3f(redVal, greenVal, blueVal);
+    gluCylinder(quadric, radius, radius, height, 32, 32); // Draw the cylinder
+
+    // Draw the top cap
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, height); // Move to the top of the cylinder
+    gluDisk(quadric, 0.0f, radius, 32, 1); // Draw the top cap
+    glPopMatrix();
+
+    // Optionally, draw the bottom cap
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.0f); // Move to the bottom of the cylinder
+    gluDisk(quadric, 0.0f, radius, 32, 1); // Draw the bottom cap
+    glPopMatrix();
+
+    glPopMatrix(); // Restore the previous transformation state
+    gluDeleteQuadric(quadric); // Clean up
+}
+
+};
+
+
+
 int currObject;
 json jsonData;
 Cube* objectToMove;
 std::vector<Cube*> cubes;
+
+int currCylinder;
+int manipCylinders;
+std::vector<Cylinder*> cylinders;
+Cylinder* currentCylinder;
+
+
 int change_all = 0;
 
 void drawLightIndicator() {
@@ -400,6 +540,33 @@ void display() {
         cube->draw();
     }
 
+    for (Cylinder* cylinder: cylinders) {
+        // Enable light based on the cube's light source
+        if (cylinder->getLightSource() == 1) {
+            glEnable(GL_LIGHTING);
+            glEnable(GL_LIGHT0);
+            glDisable(GL_LIGHT1);
+            std::cout << "Color: " 
+          << (cylinder->getColor()[0]) << ", " 
+          << (cylinder->getColor()[1]) << ", " 
+          << (cylinder->getColor()[2]) << std::endl;
+        } else if (cylinder->getLightSource() == 2) {
+            glEnable(GL_LIGHTING);
+            glDisable(GL_LIGHT0);
+            glEnable(GL_LIGHT1);
+            
+        } else if (cylinder->getLightSource() == 0) {
+            // If the cylinder doesn't use any light, disable both lights
+            // Disable lighting for this cylinder
+            glDisable(GL_LIGHTING);
+            // Set the color directly for rendering without lighting
+            glColor3f(cylinder->getColor()[0]/255, cylinder->getColor()[1]/255, cylinder->getColor()[2]/255);
+        }
+
+        // Draw the cylinder
+        cylinder->draw();
+    }
+
     // Ensure lights are disabled after drawing
     glDisable(GL_LIGHT0);
     glDisable(GL_LIGHT1);
@@ -498,141 +665,244 @@ void normalKeys(unsigned char key, int x, int y) {
 
         case 'w':
             if (rotate) {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->rotate(10.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->rotate(5.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                        }
+                    } else {
+                        currentCylinder->rotate(5.0f, 0.0f, 0.0f); // Rotate current cylinder around the x-axis
                     }
                 } else {
-                    objectToMove->rotate(5.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->rotate(10.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                        }
+                    } else {
+                        objectToMove->rotate(5.0f, 0.0f, 0.0f); // Rotate current object around the x-axis
+                    }
                 }
             } else {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->translate(0.0f, 0.0f, 0.1f);
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->translate(0.0f, 0.0f, 0.1f);
+                        }
+                    } else {
+                        currentCylinder->translate(0.0f, 0.0f, 0.1f); // Translate current cylinder
                     }
-                } else if (moveLighting) {
-                    lightPositions[light_to_move][2] += 0.1f; // Move light in the z direction
-                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
                 } else {
-                    objectToMove->translate(0.0f, 0.0f, 0.1f);
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->translate(0.0f, 0.0f, 0.1f);
+                        }
+                    } else if (moveLighting) {
+                        lightPositions[light_to_move][2] += 0.1f; // Move light in the z direction
+                        std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                    } else {
+                        objectToMove->translate(0.0f, 0.0f, 0.1f);
+                    }
                 }
             }
             break;
 
         case 's':
             if (rotate) {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->rotate(-10.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->rotate(-10.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                        }
+                    } else {
+                        currentCylinder->rotate(-5.0f, 0.0f, 0.0f); // Rotate current cylinder around the x-axis
                     }
                 } else {
-                    objectToMove->rotate(-5.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->rotate(-10.0f, 0.0f, 0.0f); // Rotate around the x-axis
+                        }
+                    } else {
+                        objectToMove->rotate(-5.0f, 0.0f, 0.0f); // Rotate current object around the x-axis
+                    }
                 }
             } else {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->translate(0.0f, 0.0f, -0.1f);
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->translate(0.0f, 0.0f, -0.1f);
+                        }
+                    } else if (moveLighting) {
+                        lightPositions[light_to_move][2] -= 0.1f; // Move light in the negative z direction
+                        std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                    } else {
+                        currentCylinder->translate(0.0f, 0.0f, -0.1f); // Translate current cylinder
                     }
-                } else if (moveLighting) {
-                    lightPositions[light_to_move][2] -= 0.1f; // Move light in the negative z direction
-                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
                 } else {
-                    objectToMove->translate(0.0f, 0.0f, -0.1f);
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->translate(0.0f, 0.0f, -0.1f);
+                        }
+                    } else if (moveLighting) {
+                        lightPositions[light_to_move][2] -= 0.1f; // Move light in the negative z direction
+                        std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                    } else {
+                        objectToMove->translate(0.0f, 0.0f, -0.1f);
+                    }
                 }
             }
             break;
 
         case 'a':
             if (rotate) {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->rotate(0.0f, 10.0f, 0.0f); // Rotate around the y-axis
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->rotate(0.0f, 10.0f, 0.0f); // Rotate around the y-axis
+                        }
+                    } else {
+                        currentCylinder->rotate(0.0f, 5.0f, 0.0f); // Rotate current cylinder around the y-axis
                     }
                 } else {
-                    objectToMove->rotate(0.0f, 5.0f, 0.0f); // Rotate around the y-axis
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->rotate(0.0f, 10.0f, 0.0f); // Rotate around the y-axis
+                        }
+                    } else {
+                        objectToMove->rotate(0.0f, 5.0f, 0.0f); // Rotate current object around the y-axis
+                    }
                 }
             } else {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->translate(-0.1f, 0.0f, 0.0f);
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->translate(-0.1f, 0.0f, 0.0f);
+                        }
+                    } else if (moveLighting) {
+                        lightPositions[light_to_move][0] -= 0.1f; // Move light in the negative x direction
+                        std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                    } else {
+                        currentCylinder->translate(-0.1f, 0.0f, 0.0f); // Translate current cylinder
                     }
-                } else if (moveLighting) {
-                    lightPositions[light_to_move][0] -= 0.1f; // Move light in the negative x direction
-                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
                 } else {
-                    objectToMove->translate(-0.1f, 0.0f, 0.0f);
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->translate(-0.1f, 0.0f, 0.0f);
+                        }
+                    } else if (moveLighting) {
+                        lightPositions[light_to_move][0] -= 0.1f; // Move light in the negative x direction
+                        std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                    } else {
+                        objectToMove->translate(-0.1f, 0.0f, 0.0f);
+                    }
                 }
             }
             break;
 
         case 'd':
             if (rotate) {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->rotate(0.0f, -5.0f, 0.0f); // Rotate around the y-axis
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->rotate(0.0f, -5.0f, 0.0f); // Rotate around the y-axis
+                        }
+                    } else {
+                        currentCylinder->rotate(0.0f, -5.0f, 0.0f); // Rotate current cylinder around the y-axis
                     }
                 } else {
-                    objectToMove->rotate(0.0f, -5.0f, 0.0f); // Rotate around the y-axis
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->rotate(0.0f, -5.0f, 0.0f); // Rotate around the y-axis
+                        }
+                    } else {
+                        objectToMove->rotate(0.0f, -5.0f, 0.0f); // Rotate current object around the y-axis
+                    }
                 }
             } else {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->translate(0.1f, 0.0f, 0.0f);
+                if (manipCylinders && currentCylinder) {
+                    if (change_all) {
+                        for (Cylinder* cylinder : cylinders) {
+                            cylinder->translate(0.1f, 0.0f, 0.0f);
+                        }
+                    } else if (moveLighting) {
+                        lightPositions[light_to_move][0] += 0.1f; // Move light in the x direction
+                        std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                    } else {
+                        currentCylinder->translate(0.1f, 0.0f, 0.0f); // Translate current cylinder
                     }
-                } else if (moveLighting) {
-                    lightPositions[light_to_move][0] += 0.1f; // Move light in the x direction
-                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
                 } else {
-                    objectToMove->translate(0.1f, 0.0f, 0.0f);
+                    if (change_all) {
+                        for (Cube* cube : cubes) {
+                            cube->translate(0.1f, 0.0f, 0.0f);
+                        }
+                    } else if (moveLighting) {
+                        lightPositions[light_to_move][0] += 0.1f; // Move light in the x direction
+                        std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+                    } else {
+                        objectToMove->translate(0.1f, 0.0f, 0.0f);
+                    }
                 }
             }
             break;
 
         case 'q':
             if (rotate) {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->rotate(0.0f, 0.0f, 10.0f); // Rotate around the z-axis
-                    }
-                } else {
-                    objectToMove->rotate(0.0f, 0.0f, 5.0f); // Rotate around the z-axis
+                if (manipCylinders && currentCylinder) {
+                    // Rotate the current cylinder around the z-axis
+                    currentCylinder->rotate(0.0f, 0.0f, 5.0f); 
+            } else if (change_all) {
+                for (Cube* cube : cubes) {
+                    cube->rotate(0.0f, 0.0f, 10.0f); // Rotate around the z-axis
                 }
-            } else {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
+            } 
+            else {
+            objectToMove->rotate(0.0f, 0.0f, 5.0f); // Rotate around the z-axis
+            }
+            }
+            else {
+                if (manipCylinders && currentCylinder) {
+                    currentCylinder->translate(0.0f, 0.1f, 0.0f); // Translate current cylinder
+        }      
+                else if (change_all) {
+            for (Cube* cube : cubes) {
                         cube->translate(0.0f, 0.1f, 0.0f);
-                    }
-                } else if (moveLighting) {
-                    lightPositions[light_to_move][1] += 0.1f; // Move light in the y direction
-                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
-                } else {
-                    objectToMove->translate(0.0f, 0.1f, 0.0f);
                 }
-            }
-            break;
+        } else if (moveLighting) {
+            lightPositions[light_to_move][1] += 0.1f; // Move light in the y direction
+            std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+        } else {
+            objectToMove->translate(0.0f, 0.1f, 0.0f);
+        }
+    }
+    break;
 
-        case 'e':
-            if (rotate) {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->rotate(0.0f, 0.0f, -10.0f); // Rotate around the z-axis
-                    }
-                } else {
-                    objectToMove->rotate(0.0f, 0.0f, -5.0f); // Rotate around the z-axis
-                }
-            } else {
-                if (change_all) {
-                    for (Cube* cube : cubes) {
-                        cube->translate(0.0f, -0.1f, 0.0f);
-                    }
-                } else if (moveLighting) {
-                    lightPositions[light_to_move][1] -= 0.1f; // Move light in the negative y direction
-                    std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
-                } else {
-                    objectToMove->translate(0.0f, -0.1f, 0.0f);
-                }
+case 'e':
+    if (rotate) {
+        if (manipCylinders && currentCylinder) {
+            // Rotate the current cylinder around the z-axis
+            currentCylinder->rotate(0.0f, 0.0f, -5.0f);
+        } else if (change_all) {
+            for (Cube* cube : cubes) {
+                cube->rotate(0.0f, 0.0f, -10.0f); // Rotate around the z-axis
             }
-            break;
+        } else {
+            objectToMove->rotate(0.0f, 0.0f, -5.0f); // Rotate around the z-axis
+        }
+    } else {
+        if (manipCylinders && currentCylinder) {
+            currentCylinder->translate(0.0f, -0.1f, 0.0f); // Translate current cylinder
+        } else if (change_all) {
+            for (Cube* cube : cubes) {
+                cube->translate(0.0f, -0.1f, 0.0f);
+            }
+        } else if (moveLighting) {
+            lightPositions[light_to_move][1] -= 0.1f; // Move light in the negative y direction
+            std::cout << "Lighting Position: (" << lightPositions[light_to_move][0] << ", " << lightPositions[light_to_move][1] << ", " << lightPositions[light_to_move][2] << ")" << std::endl;
+        } else {
+            objectToMove->translate(0.0f, -0.1f, 0.0f);
+        }
+    }
+    break;
+
 
         case 'l':
             objectToMove->log();
@@ -643,21 +913,52 @@ void normalKeys(unsigned char key, int x, int y) {
             std::cout << (moveLighting ? "Lighting ON" : "Lighting OFF") << std::endl;
             break;
 
-        case '1':
-            objectToMove->resize(0.05f, 0.0f, 0.0f);
+        case 'n':
+            manipCylinders = !manipCylinders; // Toggle manipCylinders
+            std::cout << (manipCylinders ? "Cylinders ON" : "Cylinders OFF") << std::endl;
             break;
+
+        case '1':
+            if (manipCylinders && currentCylinder) {
+                currentCylinder->resize(0.05f, 0.0f);
+                break;
+            }
+            else{
+                objectToMove->resize(0.05f, 0.0f, 0.0f);
+                break;
+            }
 
         case '2':
-            objectToMove->resize(-0.05f, 0.0f, 0.0f);
-            break;
+            if (manipCylinders && currentCylinder) {
+                currentCylinder->resize(-0.05f, 0.0f);
+                break;
+            }
+            else{
+                objectToMove->resize(-0.05f, 0.0f, 0.0f);
+                break;
+            }
 
         case '3':
-            objectToMove->resize(0.0f, 0.05f, 0.0f);
-            break;
+            if (manipCylinders && currentCylinder) {
+                currentCylinder->resize(0.0f, 0.05f);
+                break;
+            }
+
+            else{
+                objectToMove->resize(0.0f, 0.05f, 0.0f);
+                break;
+            }
 
         case '4':
-            objectToMove->resize(0.0f, -0.05f, 0.0f);
-            break;
+            if (manipCylinders && currentCylinder) {
+                currentCylinder->resize(0.0f, -0.05f);
+                break;
+            }
+
+            else{
+                objectToMove->resize(0.0f, -0.05f, 0.0f);
+                break;
+            }
 
         case '5':
             objectToMove->resize(0.0f, 0.0f, 0.05f);
@@ -668,18 +969,40 @@ void normalKeys(unsigned char key, int x, int y) {
             break;
 
         case '/':
-            currObject = (currObject < cubes.size() - 1) ? currObject + 1 : 0; // Cycle through cubes
-            objectToMove = cubes[currObject];
-            break;
+            if (manipCylinders && currentCylinder) {
+                currCylinder = (currCylinder < cylinders.size() - 1) ? currCylinder + 1 : 0; // Cycle through cylinders
+                currentCylinder = cylinders[currCylinder];
+                break;
+            }
+
+            else{
+                currObject = (currObject < cubes.size() - 1) ? currObject + 1 : 0; // Cycle through cubes
+                objectToMove = cubes[currObject];
+                break;
+            }
 
         case ';':
         {
+            if (manipCylinders && currentCylinder) {
+                std::string name = "Cylinder" + std::to_string(cylinders.size());
+                cylinders.emplace_back(new Cylinder(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, name, 0.0, 0.0, 0.0, -1));
+                break;
+            }
             std::string cubeName = "Cube" + std::to_string(cubes.size());
             cubes.emplace_back(new Cube(0.0f, 0.0f, -5.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, cubeName, 0.0, 0.0, 0.0, -1));
             break;
         }
 
         case '.':
+
+            for (Cylinder* cylinder : cylinders) {
+                jsonData[cylinder->getName()]["Type"] = "Cylinder";
+                jsonData[cylinder->getName()]["Position"] = cylinder->getPosition();
+                jsonData[cylinder->getName()]["Rotation"] = cylinder->getRotation();
+                jsonData[cylinder->getName()]["Dimensions"] = cylinder->getDimensions();
+                jsonData[cylinder->getName()]["Color"] = cylinder->getColor();
+                jsonData[cylinder->getName()]["LightSource"] = cylinder->getLightSource();
+            }
             for (Cube* cube : cubes) {
                 jsonData[cube->getName()]["Type"] = "Cube";
                 jsonData[cube->getName()]["Position"] = cube->getPosition();
@@ -757,10 +1080,26 @@ int main(int argc, char** argv) {
             float blue = color[2];
             cubes.push_back(new Cube(x, y, z, rx, ry, rz, w, h, l, key, red, green, blue, lightSource));
         }
+
+        if (type == "Cylinder") {
+            float x = position[0];
+            float y = position[1];
+            float z = position[2];
+            float rx = rotation[0];
+            float ry = rotation[1];
+            float rz = rotation[2];
+            float r = dimensions[0];
+            float h = dimensions[1];
+            float red = color[0];
+            float green = color[1];
+            float blue = color[2];
+            cylinders.push_back(new Cylinder(x, y, z, rx, ry, rz, r, h, key, red, green, blue, lightSource));
+        }
     }
 
     // set object to move
     objectToMove = cubes[currObject];
+    currentCylinder = cylinders[currCylinder];
 
     // Create window and start rednering loop
     glutInit(&argc, argv);
