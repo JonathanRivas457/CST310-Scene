@@ -4,11 +4,16 @@
 #include <fstream>
 #include <string>
 #include <array>
-
+#include <SOIL/SOIL.h>
 
 GLfloat lightPos[] = {10.7f, -1.3f, -7.1f, 1.0f}; 
 GLfloat lightPos0[] = {-2.7f, -1.7f, 3.5f, 1.0f};
 
+GLuint textureFloor, textureWood, textureFridge, textureLaptop, textureTV, textureScreen, textureMattress, texturePaper, textureConsole;
+
+GLuint depthMapFBO; // Framebuffer for shadow mapping
+GLuint depthMap; // Texture to store the depth map
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 // Create a 2D array to store both light positions
 GLfloat lightPositions[2][4] = {
@@ -35,6 +40,7 @@ private:
     float redVal, greenVal, blueVal; // Color of the cube
     int lightsource;
     std::string name; // Name of the cube
+    GLuint textureID;
 
 
 public:
@@ -49,14 +55,19 @@ public:
     Cube(float x, float y, float z, 
          float rx, float ry, float rz, 
          float w, float h, float l, const std::string& cubeName, float red, float green, float blue,
-         int light) 
+         int light, GLuint texID) 
         : posX(x), posY(y), posZ(z), // Set position
           rotX(rx), rotY(ry), rotZ(rz), // Set rotation
           width(w), height(h), length(l), // Set dimensions
           redVal(red/255), greenVal(green/255), blueVal(blue/255), // Set color
           name(cubeName),
-          lightsource(light) // set name
+          lightsource(light), // set name
+          textureID(texID)
     {}
+
+    void setTextureID(GLuint texID) {
+        textureID = texID;
+    }
 
     // Methods to modify the cube's position and rotation
     void setPosition(float x, float y, float z) {
@@ -117,123 +128,83 @@ public:
     }
 
 
-    // Method to draw the cube
     void draw() {
-    if (lightsource > 0){
-        // Set material properties for shading
+        // Set material properties for shading (only if light source is enabled)
+        if (lightsource > 0) {
+            GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0};  // Diffuse color
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
+            GLfloat shininess[] = {100.0};  // Shininess coefficient
+            glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+        }
 
-        GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
-        glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
+        glPushMatrix();  // Save current transformation state
+        glTranslatef(posX, posY, posZ);  // Move cube to its position
+        glRotatef(rotX, 1.0f, 0.0f, 0.0f);  // Rotate cube around X axis
+        glRotatef(rotY, 0.0f, 1.0f, 0.0f);  // Rotate cube around Y axis
+        glRotatef(rotZ, 0.0f, 0.0f, 1.0f);  // Rotate cube around Z axis
+        glScalef(width, height, length);  // Scale the cube
 
-        GLfloat shininess[] = {100.0}; // Shininess coefficient
-        glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
-    }
+        // Enable or disable texturing based on textureID
+        if (textureID != 0) {
+            glEnable(GL_TEXTURE_2D);  // Enable 2D texturing
+            glBindTexture(GL_TEXTURE_2D, textureID);
+        } else {
+            glDisable(GL_TEXTURE_2D);  // Disable texturing and use color
+            glColor3f(redVal, greenVal, blueVal);  // Use cube's color
+        }
 
-    glPushMatrix(); // Save current transformation state
-    glTranslatef(posX, posY, posZ);  // Move cube to its position
-    glRotatef(rotX, 1.0f, 0.0f, 0.0f); // Rotate cube around X axis
-    glRotatef(rotY, 0.0f, 1.0f, 0.0f); // Rotate cube around Y axis
-    glRotatef(rotZ, 0.0f, 0.0f, 1.0f); // Rotate cube around Z axis
-    glScalef(width, height, length); // Scale the cube
+        glBegin(GL_QUADS);
 
-    glBegin(GL_QUADS);
-
-    if (lightsource == -1) {
         // Front face
-        glColor3f(1.0f, 0.0f, 0.0f);  // Red
-        glNormal3f(-1.0f, 0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glNormal3f(0.0f, 0.0f, 1.0f);  // Normal facing forward
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);
 
         // Back face
-        glColor3f(0.0f, 1.0f, 0.0f);  // Green
-        glNormal3f(0.0f, 0.0f, -1.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
+        glNormal3f(0.0f, 0.0f, -1.0f);  // Normal facing backward
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);
 
         // Left face
-        glColor3f(0.0f, 0.0f, 1.0f);  // Blue
-        glNormal3f(0.0f, 0.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glNormal3f(-1.0f, 0.0f, 0.0f);  // Normal facing left
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);
 
         // Right face
-        glColor3f(1.0f, 1.0f, 0.0f);  // Yellow
-        glNormal3f(1.0f, 0.0f, 0.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
+        glNormal3f(1.0f, 0.0f, 0.0f);  // Normal facing right
+        glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f,  1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f( 1.0f,  1.0f, -1.0f);
 
         // Top face
-        glColor3f(1.0f, 0.0f, 1.0f);  // Magenta
-        glNormal3f(0.0f, 1.0f, 0.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
+        glNormal3f(0.0f, 1.0f, 0.0f);  // Normal facing up
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f,  1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,  1.0f, -1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f,  1.0f,  1.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);
 
         // Bottom face
-        glColor3f(0.0f, 1.0f, 1.0f);  // Cyan
-        glNormal3f(0.0f, -1.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-    } else {
-        // Draw as before if lightsource != 0
-        // Front face
-        glNormal3f(0.0f, 0.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glNormal3f(0.0f, -1.0f, 0.0f);  // Normal facing down
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, -1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f( 1.0f, -1.0f,  1.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f, -1.0f,  1.0f);
 
-        // Back face
-        glNormal3f(0.0f, 0.0f, -1.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
+        glEnd();
 
-        // Left face
-        glNormal3f(-1.0f, 0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
+        if (textureID != 0) {
+            glDisable(GL_TEXTURE_2D);  // Disable texturing after drawing if it was enabled
+        }
 
-        // Right face
-        glNormal3f(1.0f, 0.0f, 0.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-
-        // Top face
-        glNormal3f(0.0f, 1.0f, 0.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-
-        // Bottom face
-        glNormal3f(0.0f, -1.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glPopMatrix();  // Restore the previous transformation state
     }
-
-    glEnd();
-    glPopMatrix(); // Restore the previous transformation state
-}
 
 };
 
@@ -246,6 +217,8 @@ private:
     float redVal, greenVal, blueVal; // Color of the cylinder
     int lightsource;
     std::string name; // Name of the cylinder
+    GLuint textureID;  // Texture ID for applying textures
+
 
 public:
     // Constructor for the cylinder
@@ -259,12 +232,12 @@ public:
     Cylinder(float x, float y, float z, 
              float rx, float ry, float rz, 
              float r, float h, const std::string& cylinderName, 
-             float red, float green, float blue, int light)
+             float red, float green, float blue, int light, GLuint texID)
         : posX(x), posY(y), posZ(z), 
           rotX(rx), rotY(ry), rotZ(rz), 
           radius(r), height(h), 
           redVal(red / 255), greenVal(green / 255), blueVal(blue / 255), 
-          name(cylinderName), lightsource(light) {}
+          name(cylinderName), lightsource(light), textureID(texID) {}
 
     // Methods to modify the cylinder's position and rotation
     void setPosition(float x, float y, float z) {
@@ -323,47 +296,57 @@ public:
         radius += dr; height += dh;
     }
 
-    // Method to draw the cylinder
     void draw() {
-    if (lightsource > 0) {
-        // Set material properties for shading
-        GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
-        glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
-        GLfloat shininess[] = {100.0}; // Shininess coefficient
-        glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+        if (lightsource > 0) {
+            // Set material properties for shading
+            GLfloat material_diffuse[] = {redVal, greenVal, blueVal, 1.0}; // Diffuse color
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse);
+            GLfloat shininess[] = {100.0}; // Shininess coefficient
+            glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+        }
+
+        glPushMatrix(); // Save current transformation state
+        glTranslatef(posX, posY, posZ); // Move cylinder to its position
+        glRotatef(rotX, 1.0f, 0.0f, 0.0f); // Rotate cylinder around X axis
+        glRotatef(rotY, 0.0f, 1.0f, 0.0f); // Rotate cylinder around Y axis
+        glRotatef(rotZ, 0.0f, 0.0f, 1.0f); // Rotate cylinder around Z axis
+
+        // Enable or disable texturing based on textureID
+        if (textureID != 0) {
+            glEnable(GL_TEXTURE_2D);  // Enable 2D texturing
+            glBindTexture(GL_TEXTURE_2D, textureID);
+        } else {
+            glDisable(GL_TEXTURE_2D);  // Disable texturing and use color
+            glColor3f(redVal, greenVal, blueVal);  // Use cylinder's color
+        }
+
+        // Draw the cylinder
+        GLUquadric* quadric = gluNewQuadric();
+        gluQuadricNormals(quadric, GLU_SMOOTH);
+        gluQuadricTexture(quadric, GL_TRUE); // Apply texture if texture is enabled
+
+        // Draw the cylinder body
+        gluCylinder(quadric, radius, radius, height, 32, 32);
+
+        // Draw the top cap
+        glPushMatrix();
+        glTranslatef(0.0f, 0.0f, height); // Move to the top of the cylinder
+        gluDisk(quadric, 0.0f, radius, 32, 1); // Draw the top cap
+        glPopMatrix();
+
+        // Optionally, draw the bottom cap
+        glPushMatrix();
+        glTranslatef(0.0f, 0.0f, 0.0f); // Move to the bottom of the cylinder
+        gluDisk(quadric, 0.0f, radius, 32, 1); // Draw the bottom cap
+        glPopMatrix();
+
+        if (textureID != 0) {
+            glDisable(GL_TEXTURE_2D);  // Disable texturing after drawing if it was enabled
+        }
+
+        glPopMatrix(); // Restore the previous transformation state
+        gluDeleteQuadric(quadric); // Clean up
     }
-
-    glPushMatrix(); // Save current transformation state
-    glTranslatef(posX, posY, posZ); // Move cylinder to its position
-    glRotatef(rotX, 1.0f, 0.0f, 0.0f); // Rotate cylinder around X axis
-    glRotatef(rotY, 0.0f, 1.0f, 0.0f); // Rotate cylinder around Y axis
-    glRotatef(rotZ, 0.0f, 0.0f, 1.0f); // Rotate cylinder around Z axis
-
-    // Draw the cylinder
-    GLUquadric* quadric = gluNewQuadric();
-    gluQuadricNormals(quadric, GLU_SMOOTH);
-    gluQuadricTexture(quadric, GL_TRUE); // If you want to apply textures
-    
-    // Draw the cylinder body
-    glColor3f(redVal, greenVal, blueVal);
-    gluCylinder(quadric, radius, radius, height, 32, 32); // Draw the cylinder
-
-    // Draw the top cap
-    glPushMatrix();
-    glTranslatef(0.0f, 0.0f, height); // Move to the top of the cylinder
-    gluDisk(quadric, 0.0f, radius, 32, 1); // Draw the top cap
-    glPopMatrix();
-
-    // Optionally, draw the bottom cap
-    glPushMatrix();
-    glTranslatef(0.0f, 0.0f, 0.0f); // Move to the bottom of the cylinder
-    gluDisk(quadric, 0.0f, radius, 32, 1); // Draw the bottom cap
-    glPopMatrix();
-
-    glPopMatrix(); // Restore the previous transformation state
-    gluDeleteQuadric(quadric); // Clean up
-}
-
 };
 
 
@@ -441,15 +424,11 @@ void drawLightIndicator() {
     glPopMatrix();  // Restore the transformation state
 }
 
-
-
 void init() {
-    glEnable(GL_DEPTH_TEST); // Enable depth testing
-
-    // Enable lighting
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHT1);
+    glEnable(GL_DEPTH_TEST);  // Enable depth testing
+    glEnable(GL_LIGHTING);    // Enable lighting
+    glEnable(GL_LIGHT0);      // Enable light 0
+    glEnable(GL_LIGHT1);      // Enable light 1
 
     // Setup light 0
     glPushMatrix(); // Save current matrix
@@ -579,44 +558,135 @@ void reshape(int w, int h) {
 int main(int argc, char** argv) {
     currObject = 0;
 
-cubes.push_back(new Cube(-8.60, 6.40, -18.00, 0.00, 720.00, 0.00, 1.00, 0.65, 4.70, "BackBeam", 255.00, 255.00, 255.00, 2));
-cubes.push_back(new Cube(-9.40, 5.00, -24.40, 0.00, 0.00, 0.00, 2.35, 4.70, 1.05, "BackCeiling", 255.00, 255.00, 255.00, 2));
-cubes.push_back(new Cube(-8.60, 2.70, -21.70, 0.00, 0.00, 0.00, 1.00, 3.10, 1.00, "BackWall", 255.00, 255.00, 255.00, 2));
-cubes.push_back(new Cube(3.90, 0.70, -10.10, 10.00, -10.00, 0.00, 0.05, 0.25, 4.25, "BedFrameBottomeam", 0.00, 0.00, 0.00, -1));
-cubes.push_back(new Cube(4.30, -1.20, -10.10, 10.00, -10.00, 0.00, 0.05, 0.25, 4.25, "BedFrameMiddleBeam", 0.00, 0.00, 0.00, -1));
-cubes.push_back(new Cube(4.30, -1.30, -12.90, 10.00, 0.00, 0.00, 0.25, 3.05, 0.15, "BedFramePillar", 182.00, 146.00, 112.00, -1));
-cubes.push_back(new Cube(4.20, -2.50, -10.10, 10.00, -5.00, 0.00, 0.05, 0.25, 4.25, "BedFrameTopBeam", 0.00, 0.00, 0.00, -1));
-cubes.push_back(new Cube(-0.80, -1.60, -16.00, -175.00, 0.00, 0.00, 3.30, 2.00, 2.25, "DeskBackLeg", 173.00, 107.00, 75.00, 1));
-cubes.push_back(new Cube(3.00, -2.50, -10.30, 10.00, 180.00, 0.00, 0.75, 0.65, 0.70, "DeskBottomDrawer", 173.00, 107.00, 75.00, 1));
-cubes.push_back(new Cube(-3.50, -1.60, -10.50, 5.00, 0.00, 0.00, 0.10, 1.65, 0.95, "DeskLeftLeg", 173.00, 107.00, 75.00, 1));
-cubes.push_back(new Cube(3.00, -1.30, -10.10, 10.00, 180.00, 0.00, 0.75, 0.30, 0.70, "DeskMiddleDrawer", 173.00, 107.00, 75.00, 1));
-cubes.push_back(new Cube(3.00, -1.70, -10.50, 10.00, 0.00, 0.00, 0.95, 1.65, 0.95, "DeskRightLeg", 173.00, 107.00, 75.00, 1));
-cubes.push_back(new Cube(0.20, 0.50, -11.50, 375.00, -180.00, 0.00, 3.75, 0.10, 2.50, "DeskTop", 205.00, 181.00, 150.00, 1));
-cubes.push_back(new Cube(3.00, -0.50, -9.90, 10.00, 180.00, 0.00, 0.75, 0.25, 0.70, "DeskTopDrawer", 173.00, 107.00, 75.00, 1));
-cubes.push_back(new Cube(-0.30, -4.20, -17.00, 15.00, 720.00, 0.00, 13.20, 0.25, 13.15, "Floor", 160.00, 152.00, 133.00, 0));
-cubes.push_back(new Cube(1.80, 1.50, -19.50, 270.00, 180.00, 0.00, 7.35, 2.55, 6.00, "ForegroundWall", 218.00, 218.00, 218.00, 0));
-cubes.push_back(new Cube(-4.10, 3.00, -12.80, 720.00, -525.00, 0.00, 0.10, 6.35, 0.05, "ForegroundWallCorner", 148.00, 150.00, 139.00, 0));
-cubes.push_back(new Cube(-8.90, 1.20, -19.70, 0.00, 0.00, 0.00, 1.00, 1.65, 1.00, "FridgeBase", 141.00, 138.00, 123.00, 0));
-cubes.push_back(new Cube(-9.10, 2.40, -18.80, 0.00, 175.00, 0.00, 1.20, 0.40, 0.05, "FridgeBottom", 188.00, 183.00, 169.00, 0));
-cubes.push_back(new Cube(-9.10, 0.70, -18.80, 0.00, 175.00, 0.00, 1.20, 1.15, 0.05, "FridgeTop", 188.00, 183.00, 169.00, 0));
-cubes.push_back(new Cube(0.20, 0.40, -10.20, 15.00, -35.00, 0.00, 1.20, 0.05, 0.95, "Laptop", 150.00, 150.00, 150.00, 0));
-cubes.push_back(new Cube(5.30, 1.20, -10.10, 15.00, 5.00, 0.00, 1.00, 0.35, 1.00, "Mattress", 255.00, 255.00, 255.00, 1));
-cylinders.push_back(new Cylinder(-8.20, 3.60, -19.70, 85.00, 0.00, 5.00, 0.25, 0.80, "PaperRoll", 245.0, 240.0, 221.0, -1));
-cubes.push_back(new Cube(-8.40, 2.90, -18.70, 5.00, 0.00, 0.00, 0.30, 0.10, 0.20, "Plates", 0.00, 0.00, 0.00, 0));
-cylinders.push_back(new Cylinder(-1.90, 1.00, -12.80, 105.00, 0.00, 0.00, 0.95, 1.00, "TVBase", 0.0, 0.0, 0.0, 0));
-cubes.push_back(new Cube(-2.00, 1.20, -13.00, 10.00, 15.00, 0.00, 0.15, 0.45, 0.25, "TVNeck", 255.00, 255.00, 255.00, 2));
-cubes.push_back(new Cube(-1.70, 2.40, -12.20, 10.00, 20.00, 0.00, 2.15, 1.05, 0.05, "TVScreen", 0.00, 0.00, 0.00, 0));
-cubes.push_back(new Cube(2.80, 0.90, -11.60, 15.00, 720.00, 0.00, 1.00, 0.25, 1.00, "Xbox", 0.00, 0.00, 0.00, 0));
-
-    // set object to move
-    objectToMove = cubes[currObject];
-    currentCylinder = cylinders[currCylinder];
-
-    // Create window and start rednering loop
+    // Initialize GLUT
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(650, 600);
-    glutCreateWindow("Cube with Class");
+    glutCreateWindow("Room Scene (with Textures)");
+
+    // Load textures before creating cubes
+    textureFloor = SOIL_load_OGL_texture("floor.jpeg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    textureWood = SOIL_load_OGL_texture("wood.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    textureFridge = SOIL_load_OGL_texture("fridge.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    textureLaptop = SOIL_load_OGL_texture("laptop.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    textureTV = SOIL_load_OGL_texture("tv.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    textureScreen = SOIL_load_OGL_texture("screen.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    textureMattress = SOIL_load_OGL_texture("mattress.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    texturePaper = SOIL_load_OGL_texture("paper.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+    textureConsole = SOIL_load_OGL_texture("console.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
+
+    if (!textureFloor) {
+        std::cerr << "Error loading textureFloor: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!textureWood) {
+        std::cerr << "Error loading textureWood: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!textureFridge) {
+        std::cerr << "Error loading textureFridge: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!textureLaptop) {
+        std::cerr << "Error loading textureLaptop: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!textureTV) {
+        std::cerr << "Error loading textureTV: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!textureScreen) {
+        std::cerr << "Error loading textureScreen: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!textureMattress) {
+        std::cerr << "Error loading textureMattress: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!texturePaper) {
+        std::cerr << "Error loading texturePaper: " << SOIL_last_result() << std::endl;
+    }
+
+    if (!textureConsole) {
+        std::cerr << "Error loading textureConsole: " << SOIL_last_result() << std::endl;
+    }
+
+    if (textureFloor != 0) {
+        cubes.push_back(new Cube(-0.30, -4.20, -17.00, 15.00, 720.00, 0.00, 13.20, 0.25, 13.15, "Floor", 200.00, 192.00, 173.00, 0, textureFloor));
+    } else {
+        std::cerr << "Floor texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (textureWood != 0) {
+        cubes.push_back(new Cube(0.20, 0.50, -11.50, 375.00, -180.00, 0.00, 3.75, 0.10, 2.50, "DeskTop", 205.00, 181.00, 150.00, 1, textureWood));
+        cubes.push_back(new Cube(3.00, -0.50, -9.90, 10.00, 180.00, 0.00, 0.75, 0.25, 0.70, "DeskTopDrawer", 173.00, 107.00, 75.00, 1, textureWood));
+        cubes.push_back(new Cube(3.00, -1.30, -10.10, 10.00, 180.00, 0.00, 0.75, 0.30, 0.70, "DeskMiddleDrawer", 173.00, 107.00, 75.00, 1, textureWood));
+        cubes.push_back(new Cube(3.00, -2.50, -10.30, 10.00, 180.00, 0.00, 0.75, 0.65, 0.70, "DeskBottomDrawer", 173.00, 107.00, 75.00, 1, textureWood));
+        cubes.push_back(new Cube(-0.80, -1.60, -16.00, -175.00, 0.00, 0.00, 3.30, 2.00, 2.25, "DeskBackLeg", 173.00, 107.00, 75.00, 1, textureWood));
+        cubes.push_back(new Cube(-3.50, -1.60, -10.50, 5.00, 0.00, 0.00, 0.10, 1.65, 0.95, "DeskLeftLeg", 173.00, 107.00, 75.00, 1, textureWood));
+        cubes.push_back(new Cube(3.00, -1.70, -10.50, 10.00, 0.00, 0.00, 0.95, 1.65, 0.95, "DeskRightLeg", 173.00, 107.00, 75.00, 1, textureWood));
+        cubes.push_back(new Cube(3.90, 0.70, -10.10, 10.00, -10.00, 0.00, 0.05, 0.25, 4.25, "BedFrameBottomeam", 195.00, 151.00, 114.00, -1, textureWood));
+        cubes.push_back(new Cube(4.30, -1.20, -10.10, 10.00, -10.00, 0.00, 0.05, 0.25, 4.25, "BedFrameMiddleBeam", 195.00, 151.00, 114.00, -1, textureWood));
+        cubes.push_back(new Cube(4.20, -2.50, -10.10, 10.00, -5.00, 0.00, 0.05, 0.25, 4.25, "BedFrameTopBeam", 195.00, 151.00, 114.00, -1, textureWood));
+        cubes.push_back(new Cube(4.30, -1.30, -12.90, 10.00, 0.00, 0.00, 0.25, 3.05, 0.15, "BedFramePillar", 182.00, 146.00, 112.00, 0, textureWood));
+    } else {
+        std::cerr << "Wood texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (textureFridge != 0) {
+        cubes.push_back(new Cube(-8.90, 1.20, -19.70, 0.00, 0.00, 0.00, 1.00, 1.65, 1.00, "FridgeBase", 141.00, 138.00, 123.00, 0, textureFridge));
+        cubes.push_back(new Cube(-9.10, 0.70, -18.80, 0.00, 175.00, 0.00, 1.20, 1.15, 0.05, "FridgeTop", 255.00, 255.00, 255.00, 0, textureFridge));
+        cubes.push_back(new Cube(-9.10, 2.40, -18.80, 0.00, 175.00, 0.00, 1.20, 0.40, 0.05, "FridgeBottom", 255.00, 255.00, 255.00, 0, textureFridge));
+
+    } else {
+        std::cerr << "Fridge texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (textureLaptop != 0) {
+        cubes.push_back(new Cube(0.20, 0.40, -10.20, 15.00, -35.00, 0.00, 1.20, 0.05, 0.95, "Laptop", 150.00, 150.00, 150.00, 0, textureLaptop));
+    } else {
+        std::cerr << "Laptop texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (textureTV != 0) {
+        cylinders.push_back(new Cylinder(-1.90, 1.00, -12.80, 105.00, 0.00, 0.00, 0.95, 1.00, "TVBase", 0.0, 0.0, 0.0, 0, textureTV));
+        cubes.push_back(new Cube(-2.00, 1.20, -13.00, 10.00, 15.00, 0.00, 0.15, 0.45, 0.25, "TVNeck", 255.00, 255.00, 255.00, 2, textureTV));
+        cubes.push_back(new Cube(-1.70, 2.40, -12.20, 10.00, 20.00, 0.00, 2.15, 1.05, 0.05, "TVFrame", 0.00, 0.00, 0.00, 0, textureTV));
+    } else {
+        std::cerr << "TV texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (textureScreen != 0) {
+        cubes.push_back(new Cube(-1.60, 2.20, -11.20, 8.00, 16.00, 0.00, 1.80, 0.8, 0.05, "TVScreen", 100.00, 100.00, 100.00, 0, textureScreen));
+    } else {
+        std::cerr << "Screen texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (textureMattress != 0) {
+        cubes.push_back(new Cube(5.30, 1.20, -10.10, 15.00, 5.00, 0.00, 1.00, 0.35, 1.00, "Mattress", 255.00, 255.00, 255.00, 0, textureMattress));
+    } else {
+        std::cerr << "Mattress texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (texturePaper != 0) {
+        cylinders.push_back(new Cylinder(-8.20, 3.60, -19.70, 85.00, 0.00, 5.00, 0.25, 0.80, "PaperRoll", 245.0, 240.0, 221.0, 0, texturePaper));
+    } else {
+        std::cerr << "Paper texture not loaded, skipping cube creation." << std::endl;
+    }
+
+    if (textureConsole != 0) {
+        cubes.push_back(new Cube(2.80, 0.90, -11.60, 15.00, 720.00, 0.00, 1.00, 0.25, 1.00, "Xbox", 150.00, 150.00, 150.00, 0, textureConsole));
+    } else {
+        std::cerr << "Console texture not loaded, skipping cube creation." << std::endl;
+    }
+
+
+    cubes.push_back(new Cube(1.80, 1.50, -19.50, 270.00, 180.00, 0.00, 7.35, 2.55, 6.00, "ForegroundWall", 229.00, 231.00, 222.00, 0, 0));
+    cubes.push_back(new Cube(-8.60, 6.40, -18.00, 0.00, 720.00, 0.00, 1.00, 0.65, 4.70, "BackBeam", 248.00, 246.00, 212.00, 2, 0));
+    cubes.push_back(new Cube(-9.40, 5.00, -24.40, 0.00, 0.00, 0.00, 2.35, 4.70, 1.05, "BackCeiling", 210.00, 205.00, 168.00, 2, 0));
+    cubes.push_back(new Cube(-8.60, 2.70, -21.70, 0.00, 0.00, 0.00, 1.00, 3.10, 1.00, "BackWall", 248.00, 246.00, 212.00, 2, 0));
+    cubes.push_back(new Cube(-4.10, 3.00, -12.80, 720.00, -525.00, 0.00, 0.10, 6.35, 0.05, "ForegroundWallCorner", 148.00, 150.00, 139.00, 0, 0));
+    cubes.push_back(new Cube(-8.40, 2.90, -18.70, 5.00, 0.00, 0.00, 0.30, 0.10, 0.20, "Plates", 0.00, 0.00, 0.00, 0, 0));
 
     init();
     glutDisplayFunc(display);
